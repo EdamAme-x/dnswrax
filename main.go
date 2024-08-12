@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"net"
@@ -9,7 +10,7 @@ import (
 )
 
 const (
-	targetDNS = "8.8.8.8:53" // DNS Server
+	targetDNS  = "8.8.8.8:53" // DNS Server
 	listenAddr = "127.0.0.1:53"
 )
 
@@ -34,14 +35,14 @@ func main() {
 		go func(data []byte, clientAddr net.Addr) {
 			lastIndex := 0
 
-			for i := 12;i<512; i++ {
+			for i := 12; i < 512; i++ {
 				if data[i] == 0 {
 					lastIndex = i
 					break
 				}
 			}
 
-			originalDomain := make([]byte, lastIndex - 12)
+			originalDomain := make([]byte, lastIndex-12)
 			copy(originalDomain, data[12:lastIndex])
 			targetDomain, err := decodeDomain(originalDomain)
 
@@ -50,7 +51,7 @@ func main() {
 				return
 			}
 
-			targetDomain = strings.TrimSuffix(targetDomain, ".proxy")
+			targetDomain = strings.TrimPrefix(targetDomain, ".proxy")
 
 			head := data[:12]
 			tail := data[lastIndex+1:]
@@ -80,7 +81,7 @@ func main() {
 			response := make([]byte, 512)
 			_, err = conn.Read(response)
 
-			// response = replaceBytes(response, encodedDomain, originalDomain)
+			response = bytes.Replace(response, encodedDomain, append(originalDomain, 0), 1)
 
 			if err != nil {
 				log.Println("failed to read response from DNS server:", err)
